@@ -13,6 +13,9 @@ namespace Redminer
 
         [Option('t', "to", Required = false, HelpText = "Set spending date to.")]
         public DateTime? To { get; set; }
+        
+        [Option('d', "dates", Required = false, HelpText = "Set spending dates.")]
+        public string Dates { get; set; }
 
         [Option('h', "hour", Required = true, HelpText = "Set spended hours.")]
         public double Hours { get; set; }

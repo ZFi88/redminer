@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using CommandLine;
@@ -20,7 +23,15 @@ namespace Redminer
                     var entry = CreateMapper()
                         .Map<TimeEntry>(arguments);
 
-                    if (!arguments.To.HasValue)
+                    if (!string.IsNullOrEmpty(arguments.Dates))
+                    {
+                        foreach (DateTime date in Parse(arguments.Dates))
+                        {
+                            await LogTime(entry.IssueId, entry.Hours, date, entry.ActivityId,
+                            entry.Comments, arguments.ApiKey);
+                        }
+                    }
+                    else if (!arguments.To.HasValue)
                     {
                         await LogTime(entry.IssueId, entry.Hours, entry.SpendOn, entry.ActivityId,
                             entry.Comments, arguments.ApiKey);
@@ -34,6 +45,40 @@ namespace Redminer
                         }
                     }
                 });
+        }
+
+        private static IEnumerable<DateTime> Parse(string datesString)
+        {
+            var regex = new Regex(@"[0-9-.,]+");
+            if (!regex.IsMatch(datesString))
+            {
+                throw new ArgumentException();
+            }
+
+            foreach (var str in datesString.Split(","))
+            {
+                var dates = str.Split("...")
+                    .Select(DateTime.Parse)
+                    .ToList();
+
+                if (dates.Count == 1)
+                {
+                    yield return dates.First();
+                }
+                else
+                {
+                    for (var i = 0; i < dates.Count - 1; i++)
+                    {
+                        var from = dates[i];
+                        var to = dates[i + 1];
+
+                        for (var j = 0; j < (to - from).Days + 1; j++)
+                        {
+                            yield return from.AddDays(j);
+                        }
+                    }
+                }
+            }
         }
 
         private static IMapper CreateMapper()
